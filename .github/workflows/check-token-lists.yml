@@ -1,0 +1,55 @@
+name: Check Token List
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Repo
+        uses: ./tools/github/setup-repo
+
+      - name: Generate new token list
+        run: bun generate:tokens
+
+      - name: Push Token List Changes
+        id: commit
+        uses: devops-infra/action-commit-push@73d3ffed46e0782df6f046d15049aae82569b389
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          add_timestamp: false
+          commit_prefix: "[Bot]"
+          commit_message: "chore: automatic tokenlist update 🤖"
+          target_branch: bot/token-list-update
+
+      - name: Publish Token List
+        if: success()
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          cp .npmrc.prod ./packages/swapkit/tokens/.npmrc
+          bun changeset pre exit
+          bun changeset version --snapshot nightly
+          cd packages/swapkit/tokens
+          npm config list
+          npm publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+      - name: Run the Action
+        if: success()
+        uses: devops-infra/action-pull-request@e66e2ba93519dc63b9884a26e620e2fd0cffab2c
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ steps.commit.outputs.branch_name }}
+          target_branch: develop
+          title: "[Bot] Update Token List"
+          label: core
+          get_diff: true

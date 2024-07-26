@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "antfu.file-nesting",
+    "biomejs.biome",
+    "bradlc.vscode-tailwindcss",
+    "exodiusstudios.comment-anchors",
+    "pomdtr.excalidraw-editor",
+    "streetsidesoftware.code-spell-checker",
+    "yoavbls.pretty-ts-errors"
+  ]
+}
